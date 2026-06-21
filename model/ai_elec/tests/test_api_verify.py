@@ -53,10 +53,22 @@ def _info(msg: str) -> None:
 def verify_settings() -> bool:
     """설정값 및 API 키 존재 여부 점검."""
     print(f"\n{SEP}")
-    print("1. 설정(settings) 및 API 키 점검")
+    print("1. 설정(config.py / settings) 및 API 키 점검")
     print(SEP)
 
     ok = True
+
+    try:
+        import config as cfg
+        _ok("config.py 로드", f"MODEL_ROOT={cfg.MODEL_ROOT.name}")
+        if settings.DATA_GO_KR_KEY == cfg.DATA_GO_KR_KEY:
+            _ok("config ↔ settings 동기화", "DATA_GO_KR_KEY 일치")
+        else:
+            _fail("config ↔ settings", "DATA_GO_KR_KEY 불일치")
+            ok = False
+    except Exception as exc:  # noqa: BLE001
+        _fail("config.py 로드", str(exc))
+        ok = False
 
     # 필수 키
     checks = [

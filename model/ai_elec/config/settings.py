@@ -1,71 +1,55 @@
-"""중앙 설정: 공공데이터 API URL, 지역 격자좌표, 환경변수 로드.
+"""도메인 설정: API URL, 행정구역 격자좌표.
 
-모든 collector 가 여기서 URL/키를 가져온다. 키가 없으면 USE_MOCK 가 True 가 되어
-collector 들이 mock 모드로 동작한다 (Graceful Degradation).
+환경변수·API 키는 model/config.py 에서 일괄 관리한다.
+collector·agent 코드는 `from ..config import settings` 로 접근한다.
 """
 from __future__ import annotations
 
-import os
+import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPO_ROOT = PROJECT_ROOT.parent
+# model/config.py import 경로 보장
+_MODEL_ROOT = Path(__file__).resolve().parents[2]
+if str(_MODEL_ROOT) not in sys.path:
+    sys.path.insert(0, str(_MODEL_ROOT))
 
-try:
-    from dotenv import load_dotenv
+from config import (  # noqa: E402
+    CACHE_TTL_SECONDS,
+    DATA_GO_KR_KEY,
+    GEMINI_API_KEY,
+    GOOGLE_API_KEY,
+    GOOGLE_SERVICE_ACCOUNT_KEY,
+    HTTP_TIMEOUT,
+    KMA_KEY,
+    KOSIS_KEY,
+    MODEL_ROOT,
+    PMGO_VI_AUTH_TOKEN,
+    REPO_ROOT,
+    USE_MOCK,
+)
 
-    # aiagriculture 와 동일: repo 루트 .env 우선, 패키지 디렉터리 .env 보조
-    load_dotenv(REPO_ROOT / ".env", override=False)
-    load_dotenv(PROJECT_ROOT / ".env", override=False)
-except Exception:  # python-dotenv 미설치여도 동작
-    pass
-
-
-def _env(*names: str, default: str = "") -> str:
-    for name in names:
-        value = os.getenv(name)
-        if value:
-            return value
-    return default
-
-
-# ---------------------------------------------------------------------------
-# 인증키 (공공데이터포털 / 기상청 / Gemini)
-# aiagriculture 호환: DATA_GO_KR_SERVICE_KEY, GOOGLE_API_KEY
-# ---------------------------------------------------------------------------
-DATA_GO_KR_KEY: str = _env("DATA_GO_KR_KEY", "DATA_GO_KR_SERVICE_KEY")
-KMA_KEY: str = _env("KMA_KEY") or DATA_GO_KR_KEY
-KOSIS_KEY: str = _env("KOSIS_KEY")
-GEMINI_API_KEY: str = _env("GEMINI_API_KEY", "GOOGLE_API_KEY")
-
-# 키가 하나도 없으면 전 구간 mock 으로 강제 (데모/오프라인 재현성)
-USE_MOCK: bool = os.getenv("USE_MOCK", "").lower() in {"1", "true", "yes"} or not DATA_GO_KR_KEY
-
-CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", "300"))
-HTTP_TIMEOUT: int = int(os.getenv("HTTP_TIMEOUT", "10"))
-
+# 하위 호환: PROJECT_ROOT = model/
+PROJECT_ROOT = MODEL_ROOT
 
 # ---------------------------------------------------------------------------
 # 공공데이터 API endpoint
 # ---------------------------------------------------------------------------
 API = {
     # 전력거래소 — 시간별 전국 전력수요량 (odcloud, 15065266)
-    # swagger: https://infuser.odcloud.kr/oas/docs?namespace=15065266/v1
     "kpx_hourly_demand": "https://api.odcloud.kr/api/15065266/v1/uddi:6ade08d2-0014-4d22-b10c-c811e3273c70",
     # 전력거래소 — 오늘전력수급현황조회
     "kpx_today_supply": "https://apis.data.go.kr/B552115/PowerSupplyStatusInfoService/getPowerSupplyStatusInfo",
-    # 한국전력 — 지역별 용도별 전력사용량 (파일기반, 여기선 mock 위주)
+    # 한국전력 — 지역별 용도별 전력사용량
     "kepco_region_usage": "https://bigdata.kepco.co.kr/openapi/v1/powerUsage/region.do",
     # 기상청 — 단기예보 조회서비스 2.0
     "kma_vilage_fcst": "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst",
-    # 통계청 KOSIS — 통계자료 (GRDP / 주민등록인구)
+    # 통계청 KOSIS
     "kosis": "https://kosis.kr/openapi/Param/statisticsParameterData.do",
 }
 
 
 # ---------------------------------------------------------------------------
-# 행정구역 → 기상청 격자좌표(nx, ny) + 대표 인구/GRDP 베이스라인(mock fallback용)
-# 실데이터 연동 시 baseline 값은 KOSIS collector 가 덮어쓴다.
+# 행정구역 → 기상청 격자좌표(nx, ny) + baseline(mock fallback용)
 # ---------------------------------------------------------------------------
 REGIONS: dict[str, dict] = {
     "서울특별시": {"nx": 60, "ny": 127, "pop_k": 9400, "grdp_trillion": 472, "base_demand_mwh": 9800},

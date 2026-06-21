@@ -18,7 +18,7 @@
 
 ## 좌표 변환
 기상청 격자(nx, ny)는 위경도→격자 변환식(LCC)으로 산출. 본 프로젝트는
-`config/settings.py:REGIONS` 에 시·도 대표 격자를 사전 매핑해 두었다.
+`config.py`(환경변수) + `config/settings.py`(API URL·REGIONS) 에 시·도 대표 격자를 사전 매핑해 두었다.
 시·군·구 단위 확장 시 KMA 격자 변환표를 추가하면 된다.
 
 ## Fallback 정책
