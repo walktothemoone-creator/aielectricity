@@ -1,6 +1,14 @@
 # 환경변수
 .env
 .env.*
+*.sh
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+*.env.development
+*.env.test
+*.env.production
 
 # Python
 __pycache__/
