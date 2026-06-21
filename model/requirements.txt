@@ -1,0 +1,10 @@
+streamlit>=1.30
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+python-dotenv>=1.0
+langgraph>=0.2
+# 선택(없어도 fallback 동작)
+autogluon.tabular>=1.0
+google-generativeai>=0.8
+plotly>=5.18
